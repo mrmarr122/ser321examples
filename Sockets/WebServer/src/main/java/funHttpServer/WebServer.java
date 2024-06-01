@@ -359,6 +359,15 @@ class WebServer {
       for (var filename : filenames) {
         builder.append("<li>" + filename + "</li>");
       }
+
+      builder.append("<li>/concatenate?str1=hello&str2=world</li>");
+      builder.append("<p>Description: Concatenates two strings provided as query parameters.</p>");
+      builder.append("<p>Example: <a href=\"/concatenate?str1=hello&str2=world\">/concatenate?str1=hello&str2=world</a></p>");
+
+      builder.append("<li>/factorial?num=5</li>");
+      builder.append("<p>Description: Calculates the factorial of a number provided as a query parameter.</p>");
+      builder.append("<p>Example: <a href=\"/factorial?num=5\">/factorial?num=5</a></p>");
+      
       builder.append("</ul>\n");
       return builder.toString();
     } else {
