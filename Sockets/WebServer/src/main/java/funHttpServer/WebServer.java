@@ -237,7 +237,8 @@ class WebServer {
           System.out.println(json);
 
           // Simple manual parsing of the JSON response
-          StringBuilder builder = new StringBuilder();
+          //StringBuilder builder = new StringBuilder();
+          builder.setLength(0);
           builder.append("HTTP/1.1 200 OK\n");
           builder.append("Content-Type: text/html; charset=utf-8\n");
           builder.append("\n");
@@ -256,11 +257,10 @@ class WebServer {
           builder.append("</body></html>");
 
           response = builder.toString().getBytes();
-        }
+
 
         } else if (request.contains("concatenate?")) {
           // Concatenate two strings
-
           try {
             Map<String, String> query_pairs = splitQuery(request.replace("concatenate?", ""));
             String str1 = query_pairs.get("str1");
