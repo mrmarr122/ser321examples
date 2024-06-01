@@ -197,22 +197,34 @@ class WebServer {
           // This multiplies two numbers, there is NO error handling, so when
           // wrong data is given this just crashes
 
-          Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-          // extract path parameters
-          query_pairs = splitQuery(request.replace("multiply?", ""));
+          try {
+            Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+            // extract path parameters
+            query_pairs = splitQuery(request.replace("multiply?", ""));
 
-          // extract required fields from parameters
-          Integer num1 = Integer.parseInt(query_pairs.get("num1"));
-          Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+            // extract required fields from parameters
+            Integer num1 = Integer.parseInt(query_pairs.get("num1"));
+            Integer num2 = Integer.parseInt(query_pairs.get("num2"));
 
-          // do math
-          Integer result = num1 * num2;
+            // do math
+            Integer result = num1 * num2;
 
-          // Generate response
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Result is: " + result);
+            // Generate response
+            builder.append("HTTP/1.1 200 OK\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("Result is: " + result);
+            } catch (NumberFormatException e) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("Invalid input: Please provide two integers.");
+            } catch (Exception e) {
+              builder.append("HTTP/1.1 500 Internal Server Error\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("Unexpected server error.");
+            }
 
           // TODO: Include error handling here with a correct error code and
           // a response that makes sense
@@ -226,17 +238,80 @@ class WebServer {
           // "Owner's repo is named RepoName. Example: find RepoName's contributors" translates to
           //     "/repos/OWNERNAME/REPONAME/contributors"
 
-          Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-          query_pairs = splitQuery(request.replace("github?", ""));
-          String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
-          System.out.println(json);
+          try {
+            Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+            query_pairs = splitQuery(request.replace("github?", ""));
+            String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
 
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Check the todos mentioned in the Java source file");
-          // TODO: Parse the JSON returned by your fetch and create an appropriate
-          // response based on what the assignment document asks for
+            JSONArray repos = new JSONArray(json);
+            StringBuilder responseContent = new StringBuilder();
+            responseContent.append("<html><body><ul>");
+            for (int i = 0; i < repos.length(); i++) {
+              JSONObject repo = repos.getJSONObject(i);
+              responseContent.append("<li>");
+              responseContent.append("Repo: " + repo.getString("full_name") + ", ");
+              responseContent.append("ID: " + repo.getInt("id") + ", ");
+              responseContent.append("Owner: " + repo.getJSONObject("owner").getString("login"));
+              responseContent.append("</li>");
+            }
+            responseContent.append("</ul></body></html>");
+
+            builder.append("HTTP/1.1 200 OK\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append(responseContent.toString());
+
+            } catch (Exception e) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("Error fetching data from GitHub: " + e.getMessage());
+            }
+
+        } else if (request.contains("concatenate?")) {
+          // Concatenate two strings
+
+          try {
+            Map<String, String> query_pairs = splitQuery(request.replace("concatenate?", ""));
+            String str1 = query_pairs.get("str1");
+            String str2 = query_pairs.get("str2");
+
+            // Generate response
+            builder.append("HTTP/1.1 200 OK\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("Concatenated result: " + str1 + str2);
+            } catch (Exception e) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("Invalid input: Please provide two strings.");
+            }
+
+        } else if (request.contains("factorial?")) {
+          // Calculate factorial of a number
+
+          try {
+            Map<String, String> query_pairs = splitQuery(request.replace("factorial?", ""));
+            Integer num = Integer.parseInt(query_pairs.get("num"));
+            Integer result = factorial(num);
+
+            // Generate response
+            builder.append("HTTP/1.1 200 OK\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("Factorial of " + num + " is: " + result);
+            } catch (NumberFormatException e) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("Invalid input: Please provide an integer.");
+            } catch (Exception e) {
+              builder.append("HTTP/1.1 500 Internal Server Error\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("Unexpected server error.");
+            }
 
         } else {
           // if the request is not recognized at all
@@ -250,11 +325,10 @@ class WebServer {
         // Output
         response = builder.toString().getBytes();
       }
-    } catch (IOException e) {
-      e.printStackTrace();
-      response = ("<html>ERROR: " + e.getMessage() + "</html>").getBytes();
-    }
-
+      } catch (IOException e) {
+        e.printStackTrace();
+        response = ("<html>ERROR: " + e.getMessage() + "</html>").getBytes();
+      }
     return response;
   }
 
@@ -362,4 +436,17 @@ class WebServer {
     }
     return sb.toString();
   }
+
+  /**
+   * Calculate the factorial of a number
+   * @param num the number to calculate factorial for
+   * @return factorial of num
+   */
+  private int factorial(int num) {
+    if (num <= 1) return 1;
+    return num * factorial(num - 1);
+  }
 }
+
+}
+
