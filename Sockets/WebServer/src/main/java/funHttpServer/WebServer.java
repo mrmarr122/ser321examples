@@ -25,8 +25,6 @@ import java.util.Random;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.nio.charset.Charset;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 class WebServer {
   public static void main(String args[]) {
@@ -233,42 +231,32 @@ class WebServer {
 
         } else if (request.contains("github?")) {
           // pulls the query from the request and runs it with GitHub's REST API
-          // check out https://docs.github.com/rest/reference/
-          //
-          // HINT: REST is organized by nesting topics. Figure out the biggest one first,
-          //     then drill down to what you care about
-          // "Owner's repo is named RepoName. Example: find RepoName's contributors" translates to
-          //     "/repos/OWNERNAME/REPONAME/contributors"
+          Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+          query_pairs = splitQuery(request.replace("github?", ""));
+          String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
+          System.out.println(json);
 
-          try {
-            Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-            query_pairs = splitQuery(request.replace("github?", ""));
-            String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
+          // Simple manual parsing of the JSON response
+          StringBuilder builder = new StringBuilder();
+          builder.append("HTTP/1.1 200 OK\n");
+          builder.append("Content-Type: text/html; charset=utf-8\n");
+          builder.append("\n");
 
-            JSONArray repos = new JSONArray(json);
-            StringBuilder responseContent = new StringBuilder();
-            responseContent.append("<html><body><ul>");
-            for (int i = 0; i < repos.length(); i++) {
-              JSONObject repo = repos.getJSONObject(i);
-              responseContent.append("<li>");
-              responseContent.append("Repo: " + repo.getString("full_name") + ", ");
-              responseContent.append("ID: " + repo.getInt("id") + ", ");
-              responseContent.append("Owner: " + repo.getJSONObject("owner").getString("login"));
-              responseContent.append("</li>");
-            }
-            responseContent.append("</ul></body></html>");
+          builder.append("<html><body>");
+          builder.append("<h1>GitHub Repositories</h1>");
+          builder.append("<ul>");
+          
+          String[] repos = json.split("\\},\\{");
+          for (String repo : repos) {
+            String name = repo.replaceAll(".*\"name\":\"([^\"]+)\".*", "$1");
+            builder.append("<li>").append(name).append("</li>");
+          }
 
-            builder.append("HTTP/1.1 200 OK\n");
-            builder.append("Content-Type: text/html; charset=utf-8\n");
-            builder.append("\n");
-            builder.append(responseContent.toString());
+          builder.append("</ul>");
+          builder.append("</body></html>");
 
-            } catch (Exception e) {
-              builder.append("HTTP/1.1 400 Bad Request\n");
-              builder.append("Content-Type: text/html; charset=utf-8\n");
-              builder.append("\n");
-              builder.append("Error fetching data from GitHub: " + e.getMessage());
-            }
+          response = builder.toString().getBytes();
+        }
 
         } else if (request.contains("concatenate?")) {
           // Concatenate two strings
